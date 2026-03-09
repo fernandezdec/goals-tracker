@@ -17,7 +17,7 @@ async function req(path, opts = {}) {
 
 export const api = {
   login:          (body)        => req('/api/auth/login', { method: 'POST', body: JSON.stringify(body) }),
-  sso:            (token)       => req('/api/auth/sso',   { method: 'POST', body: JSON.stringify({ token }) }),
+  sso:            (token)       => fetch('/api/auth/sso', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) }).then(r => { if (!r.ok) throw new Error('SSO failed'); return r.json(); }),
   me:             ()            => req('/api/auth/me'),
   changePassword: (body)        => req('/api/auth/change-password', { method: 'POST', body: JSON.stringify(body) }),
 

@@ -50,7 +50,9 @@ app.post('/api/auth/sso', (req, res) => {
       decoded.fullName || decoded.displayName || decoded.username || 'User',
       decoded.role || 'player'
     );
-    user = db.prepare(`SELECT * FROM users WHERE id=?`).get(result.lastInsertRowid);
+    user = result.lastInsertRowid
+      ? db.prepare(`SELECT * FROM users WHERE id=?`).get(result.lastInsertRowid)
+      : db.prepare(`SELECT * FROM users WHERE username=?`).get((decoded.username || '').toLowerCase());
   }
   if (!user) return res.status(500).json({ error: 'Could not create session' });
 
