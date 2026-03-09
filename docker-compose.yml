@@ -1,0 +1,29 @@
+services:
+  goals-tracker-api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: goals-tracker-api
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/data
+    networks:
+      - goals-internal
+
+  goals-tracker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: goals-tracker
+    restart: unless-stopped
+    ports:
+      - "3030:80"
+    depends_on:
+      - goals-tracker-api
+    networks:
+      - goals-internal
+
+networks:
+  goals-internal:
+    driver: bridge
