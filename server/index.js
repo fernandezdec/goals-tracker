@@ -77,7 +77,7 @@ app.post('/api/auth/change-password', authMiddleware, (req, res) => {
 
 // ── Position Groups ───────────────────────────────────────────────────────────
 
-app.get('/api/groups', authMiddleware, (req, res) => {
+app.get('/api/groups', (req, res) => {
   const groups = db.prepare(`SELECT * FROM position_groups ORDER BY sort_order`).all();
   // For each group add summary stats
   const stmt = db.prepare(`
@@ -90,7 +90,7 @@ app.get('/api/groups', authMiddleware, (req, res) => {
 
 // ── Goals ─────────────────────────────────────────────────────────────────────
 
-app.get('/api/goals', authMiddleware, (req, res) => {
+app.get('/api/goals', (req, res) => {
   const { group_id, type } = req.query;
   let sql = `SELECT * FROM goals WHERE active=1`;
   const params = [];
@@ -100,7 +100,7 @@ app.get('/api/goals', authMiddleware, (req, res) => {
   res.json(db.prepare(sql).all(...params));
 });
 
-app.get('/api/goals/:id', authMiddleware, (req, res) => {
+app.get('/api/goals/:id', (req, res) => {
   const goal = db.prepare(`SELECT * FROM goals WHERE id=?`).get(req.params.id);
   if (!goal) return res.status(404).json({ error: 'Goal not found' });
   res.json(goal);
@@ -139,7 +139,7 @@ app.delete('/api/goals/:id', authMiddleware, requireCoach, (req, res) => {
 
 // ── Progress Updates ──────────────────────────────────────────────────────────
 
-app.get('/api/goals/:id/progress', authMiddleware, (req, res) => {
+app.get('/api/goals/:id/progress', (req, res) => {
   const history = db.prepare(`SELECT * FROM progress_updates WHERE goal_id=? ORDER BY created_at DESC`).all(req.params.id);
   res.json(history);
 });
@@ -161,7 +161,7 @@ app.post('/api/goals/:id/progress', authMiddleware, requireCoach, (req, res) => 
 
 // ── Scoreboard ────────────────────────────────────────────────────────────────
 
-app.get('/api/scoreboard', authMiddleware, (req, res) => {
+app.get('/api/scoreboard', (req, res) => {
   const weeks = db.prepare(`SELECT * FROM scoreboard_weeks ORDER BY id DESC`).all();
   const entriesStmt = db.prepare(`SELECT * FROM scoreboard_entries WHERE week_id=? ORDER BY rowid`);
   res.json(weeks.map(w => ({ ...w, metrics: entriesStmt.all(w.id) })));

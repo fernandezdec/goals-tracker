@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { api } from './api';
 import { C } from './App';
 
-export default function Login({ onLogin }) {
+export default function Login({ onLogin, onCancel }) {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword]     = useState('');
   const [err, setErr]               = useState('');
@@ -89,7 +89,14 @@ export default function Login({ onLogin }) {
           </div>
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: 24, fontFamily: C.mono, fontSize: 10, color: C.greyDark, letterSpacing: 2 }}>
+        {onCancel && (
+          <div style={{ textAlign: 'center', marginTop: 16 }}>
+            <button onClick={onCancel} style={{ background: 'transparent', border: 'none', color: C.greyDark, fontFamily: C.mono, fontSize: 10, letterSpacing: 2, cursor: 'pointer', textDecoration: 'underline' }}>
+              ← BACK TO DASHBOARD
+            </button>
+          </div>
+        )}
+        <div style={{ textAlign: 'center', marginTop: 16, fontFamily: C.mono, fontSize: 10, color: C.greyDark, letterSpacing: 2 }}>
           FOHI STEELERS · TEAM GOALS · RESTRICTED ACCESS
         </div>
       </div>

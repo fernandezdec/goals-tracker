@@ -11,7 +11,7 @@ export default function Scoreboard({ user }) {
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(null); // entry id being saved
 
-  const isCoach = ['admin', 'coach'].includes(user.role);
+  const isCoach = user && ['admin', 'coach'].includes(user.role);
 
   const load = useCallback(async () => {
     setLoading(true);

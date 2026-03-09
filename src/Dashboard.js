@@ -3,7 +3,7 @@ import { api } from './api';
 import { C, calcProgress, progressColor, progressBg } from './App';
 import Scoreboard from './Scoreboard';
 
-export default function Dashboard({ user, onOpenGroup, onLogout }) {
+export default function Dashboard({ user, onOpenGroup, onLogout, onCoachLogin }) {
   const [groups, setGroups]   = useState([]);
   const [allGoals, setAllGoals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +34,7 @@ export default function Dashboard({ user, onOpenGroup, onLogout }) {
     ? Math.round(allGoals.reduce((a, g) => a + calcProgress(g), 0) / allGoals.length)
     : 0;
 
-  const isCoach = ['admin', 'coach'].includes(user.role);
+  const isCoach = user && ['admin', 'coach'].includes(user.role);
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, color: C.white }}>
@@ -56,13 +56,21 @@ export default function Dashboard({ user, onOpenGroup, onLogout }) {
                 {overallPct}%
               </div>
             </div>
-            <div style={{ fontFamily: C.mono, fontSize: 11, color: C.grey }}>
-              {user.displayName}
-              {isCoach && <span style={{ color: C.maroonBright, marginLeft: 8, fontSize: 9, letterSpacing: 1 }}>COACH</span>}
-            </div>
-            <button onClick={onLogout} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.grey, borderRadius: 6, padding: '6px 12px', fontSize: 11, cursor: 'pointer', fontFamily: C.mono, letterSpacing: 1 }}>
-              SIGN OUT
-            </button>
+            {user ? (
+              <>
+                <div style={{ fontFamily: C.mono, fontSize: 11, color: C.grey }}>
+                  {user.displayName}
+                  {isCoach && <span style={{ color: C.maroonBright, marginLeft: 8, fontSize: 9, letterSpacing: 1 }}>COACH</span>}
+                </div>
+                <button onClick={onLogout} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.grey, borderRadius: 6, padding: '6px 12px', fontSize: 11, cursor: 'pointer', fontFamily: C.mono, letterSpacing: 1 }}>
+                  SIGN OUT
+                </button>
+              </>
+            ) : (
+              <button onClick={onCoachLogin} style={{ background: C.maroon, color: C.white, border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 11, cursor: 'pointer', fontFamily: C.mono, letterSpacing: 1 }}>
+                COACH LOGIN
+              </button>
+            )}
           </div>
         </div>
         {/* Tabs */}

@@ -53,10 +53,11 @@ export function progressBg(pct) {
 }
 
 export default function App() {
-  const [user, setUser]     = useState(null);
-  const [view, setView]     = useState('dashboard'); // 'dashboard' | 'group'
+  const [user, setUser]       = useState(null);
+  const [view, setView]       = useState('dashboard'); // 'dashboard' | 'group'
   const [groupId, setGroupId] = useState(null);
-  const [ready, setReady]   = useState(false);
+  const [ready, setReady]     = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -90,16 +91,17 @@ export default function App() {
     </div>
   );
 
-  if (!user) return <Login onLogin={(u, t) => { setToken(t); setUser(u); }} />;
+  if (showLogin && !user) return <Login onLogin={(u, t) => { setToken(t); setUser(u); setShowLogin(false); }} onCancel={() => setShowLogin(false)} />;
 
-  if (user.mustChangePw) return <ForceChangePassword user={user} onChanged={() => setUser({ ...user, mustChangePw: false })} onLogout={() => { clearToken(); setUser(null); }} />;
+  if (user?.mustChangePw) return <ForceChangePassword user={user} onChanged={() => setUser({ ...user, mustChangePw: false })} onLogout={() => { clearToken(); setUser(null); }} />;
 
-  const openGroup = (id) => { setGroupId(id); setView('group'); };
-  const goBack    = ()   => { setView('dashboard'); setGroupId(null); };
-  const logout    = ()   => { clearToken(); setUser(null); };
+  const openGroup    = (id) => { setGroupId(id); setView('group'); };
+  const goBack       = ()   => { setView('dashboard'); setGroupId(null); };
+  const logout       = ()   => { clearToken(); setUser(null); };
+  const coachLogin   = ()   => setShowLogin(true);
 
-  if (view === 'group') return <GroupView groupId={groupId} user={user} onBack={goBack} onLogout={logout} />;
-  return <Dashboard user={user} onOpenGroup={openGroup} onLogout={logout} />;
+  if (view === 'group') return <GroupView groupId={groupId} user={user} onBack={goBack} onLogout={logout} onCoachLogin={coachLogin} />;
+  return <Dashboard user={user} onOpenGroup={openGroup} onLogout={logout} onCoachLogin={coachLogin} />;
 }
 
 function ForceChangePassword({ user, onChanged, onLogout }) {

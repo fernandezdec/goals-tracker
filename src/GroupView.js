@@ -6,7 +6,7 @@ const GOAL_TYPES = ['season', 'game', 'leadership', 'culture'];
 const TYPE_LABELS = { season: 'Season Target', game: 'Game Goal', leadership: 'Leadership', culture: 'Culture' };
 const TYPE_COLORS = { season: C.maroonBright, game: '#3b82f6', leadership: '#a855f7', culture: '#f59e0b' };
 
-export default function GroupView({ groupId, user, onBack, onLogout }) {
+export default function GroupView({ groupId, user, onBack, onLogout, onCoachLogin }) {
   const [group, setGroup]       = useState(null);
   const [goals, setGoals]       = useState([]);
   const [loading, setLoading]   = useState(true);
@@ -15,7 +15,7 @@ export default function GroupView({ groupId, user, onBack, onLogout }) {
   const [showProg, setShowProg] = useState(null);  // goal for progress panel
   const [history, setHistory]   = useState([]);
 
-  const isCoach = ['admin', 'coach'].includes(user.role);
+  const isCoach = user && ['admin', 'coach'].includes(user.role);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -70,9 +70,15 @@ export default function GroupView({ groupId, user, onBack, onLogout }) {
                 + ADD GOAL
               </button>
             )}
-            <button onClick={onLogout} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.grey, borderRadius: 6, padding: '6px 12px', fontSize: 11, cursor: 'pointer', fontFamily: C.mono, letterSpacing: 1 }}>
-              SIGN OUT
-            </button>
+            {user ? (
+              <button onClick={onLogout} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.grey, borderRadius: 6, padding: '6px 12px', fontSize: 11, cursor: 'pointer', fontFamily: C.mono, letterSpacing: 1 }}>
+                SIGN OUT
+              </button>
+            ) : (
+              <button onClick={onCoachLogin} style={{ background: C.maroon, color: C.white, border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 11, cursor: 'pointer', fontFamily: C.mono, letterSpacing: 1 }}>
+                COACH LOGIN
+              </button>
+            )}
           </div>
         </div>
 
