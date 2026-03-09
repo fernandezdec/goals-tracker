@@ -216,9 +216,12 @@ function seedScoreboard() {
   ];
 
   const result = wk.run('Week 1', 'Season Opener');
-  const weekId = result.lastInsertRowid;
-  for (const [key, label, target] of METRICS) {
-    entry.run(weekId, key, label, target);
+  const weekId = result.lastInsertRowid ||
+    db.prepare(`SELECT id FROM scoreboard_weeks WHERE week_label=?`).get('Week 1')?.id;
+  if (weekId) {
+    for (const [key, label, target] of METRICS) {
+      entry.run(weekId, key, label, target);
+    }
   }
 }
 
