@@ -4,7 +4,13 @@ import { C, calcProgress, progressColor, progressBg } from './App';
 
 const GOAL_TYPES = ['season', 'game', 'leadership', 'culture'];
 const TYPE_LABELS = { season: 'Season Target', game: 'Game Goal', leadership: 'Leadership', culture: 'Culture' };
-const TYPE_COLORS = { season: C.maroonBright, game: '#3b82f6', leadership: '#a855f7', culture: '#f59e0b' };
+// NOTE: TYPE_COLORS must be a function (not a const) to avoid a circular-dependency
+// crash — C is imported from App.js which also imports this file, so C is undefined
+// at module-evaluation time.
+function getTypeColor(type) {
+  const map = { season: C.maroonBright, game: '#3b82f6', leadership: '#a855f7', culture: '#f59e0b' };
+  return map[type] || C.grey;
+}
 
 export default function GroupView({ groupId, user, onBack, onLogout, onCoachLogin }) {
   const [group, setGroup]       = useState(null);
@@ -132,8 +138,8 @@ export default function GroupView({ groupId, user, onBack, onLogout, onCoachLogi
             {GOAL_TYPES.filter(t => byType[t]).map(type => (
               <div key={type} style={{ marginBottom: 32 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-                  <div style={{ width: 4, height: 20, background: TYPE_COLORS[type], borderRadius: 2 }} />
-                  <div style={{ fontFamily: C.heading, fontSize: 13, letterSpacing: 3, color: TYPE_COLORS[type] }}>{TYPE_LABELS[type].toUpperCase()}</div>
+                  <div style={{ width: 4, height: 20, background: getTypeColor(type), borderRadius: 2 }} />
+                  <div style={{ fontFamily: C.heading, fontSize: 13, letterSpacing: 3, color: getTypeColor(type) }}>{TYPE_LABELS[type].toUpperCase()}</div>
                   <div style={{ flex: 1, height: 1, background: C.border }} />
                   <div style={{ fontFamily: C.mono, fontSize: 10, color: C.grey }}>{byType[type].length} GOALS</div>
                 </div>
@@ -254,6 +260,10 @@ function ProgressPanel({ goal, history, isCoach, onClose, onUpdated, onHistoryUp
   const [week, setWeek]     = useState('');
   const [saving, setSaving] = useState(false);
   const [err, setErr]       = useState('');
+  const [editingId, setEditingId] = useState(null);
+  const [editVal, setEditVal]     = useState('');
+  const [editNote, setEditNote]   = useState('');
+  const [editWeek, setEditWeek]   = useState('');
 
   const save = async () => {
     if (newVal === '') return setErr('Enter a value');
@@ -264,6 +274,43 @@ function ProgressPanel({ goal, history, isCoach, onClose, onUpdated, onHistoryUp
       const h = await api.progress(goal.id);
       onHistoryUpdated(h);
       setNewVal(''); setNote(''); setWeek('');
+    } catch (e) { setErr(e.message); }
+    setSaving(false);
+  };
+
+  const startEdit = (h) => {
+    setEditingId(h.id);
+    setEditVal(String(h.new_value));
+    setEditNote(h.note || '');
+    setEditWeek(h.week_label || '');
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditVal(''); setEditNote(''); setEditWeek('');
+  };
+
+  const saveEdit = async (h) => {
+    if (editVal === '') return;
+    setSaving(true);
+    try {
+      const result = await api.editProgress(h.id, { new_value: parseFloat(editVal), note: editNote, week_label: editWeek });
+      onUpdated(result.goal);
+      const hist = await api.progress(goal.id);
+      onHistoryUpdated(hist);
+      setEditingId(null);
+    } catch (e) { setErr(e.message); }
+    setSaving(false);
+  };
+
+  const deleteEntry = async (h) => {
+    if (!window.confirm(`Delete this progress entry (${h.new_value} ${goal.unit})?`)) return;
+    setSaving(true);
+    try {
+      const result = await api.deleteProgress(h.id);
+      onUpdated(result.goal);
+      const hist = await api.progress(goal.id);
+      onHistoryUpdated(hist);
     } catch (e) { setErr(e.message); }
     setSaving(false);
   };
@@ -331,17 +378,58 @@ function ProgressPanel({ goal, history, isCoach, onClose, onUpdated, onHistoryUp
               <div style={{ fontFamily: C.mono, fontSize: 11, color: C.greyDark, textAlign: 'center', padding: 20 }}>No updates yet</div>
             ) : (
               history.map((h, i) => (
-                <div key={h.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: 12, marginBottom: 8 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                    <div style={{ fontFamily: C.mono, fontSize: 13, color: C.white, fontWeight: 600 }}>
-                      <span style={{ color: C.grey, fontWeight: 400 }}>{h.previous_value} → </span>
-                      <span style={{ color: progressColor(Math.min(100, (h.new_value / goal.target_value) * 100)) }}>{h.new_value}</span>
-                      <span style={{ color: C.grey, fontWeight: 400 }}> {goal.unit}</span>
+                <div key={h.id} style={{ background: C.card, border: `1px solid ${editingId === h.id ? C.maroon : C.border}`, borderRadius: 8, padding: 12, marginBottom: 8 }}>
+                  {editingId === h.id ? (
+                    /* Inline edit form */
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div>
+                        <div style={{ fontFamily: C.mono, fontSize: 9, color: C.grey, letterSpacing: 1, marginBottom: 3 }}>VALUE ({goal.unit || 'value'})</div>
+                        <input value={editVal} onChange={e => setEditVal(e.target.value)} type="number" step="any" style={{ ...inp, fontSize: 12, padding: '8px 10px' }} />
+                      </div>
+                      <div>
+                        <div style={{ fontFamily: C.mono, fontSize: 9, color: C.grey, letterSpacing: 1, marginBottom: 3 }}>WEEK</div>
+                        <input value={editWeek} onChange={e => setEditWeek(e.target.value)} placeholder="Week 3" style={{ ...inp, fontSize: 12, padding: '8px 10px' }} />
+                      </div>
+                      <div>
+                        <div style={{ fontFamily: C.mono, fontSize: 9, color: C.grey, letterSpacing: 1, marginBottom: 3 }}>NOTE</div>
+                        <input value={editNote} onChange={e => setEditNote(e.target.value)} placeholder="Note" style={{ ...inp, fontSize: 12, padding: '8px 10px' }} />
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                        <button onClick={() => saveEdit(h)} disabled={saving} style={{ flex: 1, background: C.green, color: C.white, border: 'none', borderRadius: 6, padding: '8px', fontFamily: C.heading, fontSize: 11, letterSpacing: 1, cursor: 'pointer' }}>
+                          {saving ? 'SAVING...' : 'SAVE'}
+                        </button>
+                        <button onClick={cancelEdit} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.grey, borderRadius: 6, padding: '8px 12px', fontSize: 11, cursor: 'pointer' }}>
+                          CANCEL
+                        </button>
+                      </div>
                     </div>
-                    {h.week_label && <span style={{ fontFamily: C.mono, fontSize: 9, color: C.maroonBright, border: `1px solid rgba(123,28,37,0.3)`, borderRadius: 4, padding: '2px 8px' }}>{h.week_label}</span>}
-                  </div>
-                  {h.note && <div style={{ fontFamily: C.body, fontSize: 11, color: C.greyDark, marginBottom: 4 }}>{h.note}</div>}
-                  <div style={{ fontFamily: C.mono, fontSize: 9, color: C.greyDark }}>by {h.updated_by} · {new Date(h.created_at).toLocaleDateString()}</div>
+                  ) : (
+                    /* Normal display */
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <div style={{ fontFamily: C.mono, fontSize: 13, color: C.white, fontWeight: 600 }}>
+                          <span style={{ color: C.grey, fontWeight: 400 }}>{h.previous_value} → </span>
+                          <span style={{ color: progressColor(Math.min(100, (h.new_value / goal.target_value) * 100)) }}>{h.new_value}</span>
+                          <span style={{ color: C.grey, fontWeight: 400 }}> {goal.unit}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {h.week_label && <span style={{ fontFamily: C.mono, fontSize: 9, color: C.maroonBright, border: `1px solid rgba(123,28,37,0.3)`, borderRadius: 4, padding: '2px 8px' }}>{h.week_label}</span>}
+                          {isCoach && (
+                            <>
+                              <button onClick={() => startEdit(h)} title="Edit" style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.grey, borderRadius: 4, padding: '2px 6px', fontSize: 11, cursor: 'pointer', lineHeight: 1 }}>
+                                ✏️
+                              </button>
+                              <button onClick={() => deleteEntry(h)} title="Delete" style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.greyDark, borderRadius: 4, padding: '2px 6px', fontSize: 11, cursor: 'pointer', lineHeight: 1 }}>
+                                🗑️
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      {h.note && <div style={{ fontFamily: C.body, fontSize: 11, color: C.greyDark, marginBottom: 4 }}>{h.note}</div>}
+                      <div style={{ fontFamily: C.mono, fontSize: 9, color: C.greyDark }}>by {h.updated_by} · {new Date(h.created_at).toLocaleDateString()}</div>
+                    </>
+                  )}
                 </div>
               ))
             )}

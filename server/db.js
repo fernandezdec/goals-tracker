@@ -92,6 +92,8 @@ function seedGroups() {
     [8, 'db',            'Defensive Backs',   '🛡️', 7],
     [9, 'special_teams', 'Special Teams',     '📌', 8],
     [10,'culture',       'Culture Goals',     '❤️', 9],
+    [11,'offense',       'Offensive Goals',   '⚔️', 10],
+    [12,'defense_goals', 'Defensive Goals',   '🛡️', 11],
   ];
   const stmt = db.prepare(
     `INSERT OR IGNORE INTO position_groups (id, name, display_name, icon, sort_order) VALUES (?,?,?,?,?)`

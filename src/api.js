@@ -30,6 +30,8 @@ export const api = {
 
   progress:       (id)          => req(`/api/goals/${id}/progress`),
   updateProgress: (id, body)    => req(`/api/goals/${id}/progress`, { method: 'POST', body: JSON.stringify(body) }),
+  editProgress:   (id, body)    => req(`/api/progress/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteProgress: (id)          => req(`/api/progress/${id}`, { method: 'DELETE' }),
 
   scoreboard:     ()            => req('/api/scoreboard'),
   addWeek:        (body)        => req('/api/scoreboard/weeks', { method: 'POST', body: JSON.stringify(body) }),

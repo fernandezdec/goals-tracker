@@ -161,6 +161,43 @@ app.post('/api/goals/:id/progress', authMiddleware, requireCoach, (req, res) => 
   res.json(db.prepare(`SELECT * FROM goals WHERE id=?`).get(goal.id));
 });
 
+// ── Edit / Delete Progress Entry ──────────────────────────────────────────
+
+app.put('/api/progress/:id', authMiddleware, requireCoach, (req, res) => {
+  const entry = db.prepare(`SELECT * FROM progress_updates WHERE id=?`).get(req.params.id);
+  if (!entry) return res.status(404).json({ error: 'Progress entry not found' });
+  const { new_value, note, week_label } = req.body;
+  if (new_value === undefined || new_value === null) return res.status(400).json({ error: 'new_value required' });
+
+  db.prepare(`UPDATE progress_updates SET new_value=?, note=?, week_label=?, updated_by=? WHERE id=?`)
+    .run(new_value, note ?? entry.note, week_label ?? entry.week_label, req.user.username, entry.id);
+
+  // Recalculate the goal's current_value from the latest progress entry
+  const latest = db.prepare(`SELECT new_value FROM progress_updates WHERE goal_id=? ORDER BY created_at DESC, id DESC LIMIT 1`).get(entry.goal_id);
+  if (latest) {
+    db.prepare(`UPDATE goals SET current_value=?, updated_at=datetime('now') WHERE id=?`).run(latest.new_value, entry.goal_id);
+  }
+
+  const goal = db.prepare(`SELECT * FROM goals WHERE id=?`).get(entry.goal_id);
+  const updatedEntry = db.prepare(`SELECT * FROM progress_updates WHERE id=?`).get(req.params.id);
+  res.json({ entry: updatedEntry, goal });
+});
+
+app.delete('/api/progress/:id', authMiddleware, requireCoach, (req, res) => {
+  const entry = db.prepare(`SELECT * FROM progress_updates WHERE id=?`).get(req.params.id);
+  if (!entry) return res.status(404).json({ error: 'Progress entry not found' });
+
+  db.prepare(`DELETE FROM progress_updates WHERE id=?`).run(req.params.id);
+
+  // Recalculate the goal's current_value from the latest remaining progress entry
+  const latest = db.prepare(`SELECT new_value FROM progress_updates WHERE goal_id=? ORDER BY created_at DESC, id DESC LIMIT 1`).get(entry.goal_id);
+  const newCurrent = latest ? latest.new_value : 0;
+  db.prepare(`UPDATE goals SET current_value=?, updated_at=datetime('now') WHERE id=?`).run(newCurrent, entry.goal_id);
+
+  const goal = db.prepare(`SELECT * FROM goals WHERE id=?`).get(entry.goal_id);
+  res.json({ success: true, goal });
+});
+
 // ── Scoreboard ────────────────────────────────────────────────────────────────
 
 app.get('/api/scoreboard', (req, res) => {
